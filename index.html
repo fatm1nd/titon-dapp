@@ -1,124 +1,98 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TON Auth & QR Scanner</title>
+    <title>TON Wallet App</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script src="https://unpkg.com/@tonconnect/sdk@latest/dist/tonconnect-sdk.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
     <style>
-        body { font-family: Arial, sans-serif; text-align: center; padding: 20px; }
-        button { padding: 10px 20px; margin: 10px; cursor: pointer; }
-        .qr-code { margin: 20px auto; }
-        .wallet-info { word-wrap: break-word; color: green; }
-        .error { color: red; }
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            text-align: center;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        .button {
+            background-color: #0088cc;
+            color: white;
+            padding: 12px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            border: none;
+            font-size: 16px;
+        }
+        .address {
+            word-break: break-all;
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #f0f0f0;
+            border-radius: 8px;
+        }
     </style>
 </head>
 <body>
-    <h1>TON Auth with QR Scanner</h1>
-    
-    <!-- QR Scanner Section -->
-    <button id="scan-btn">Scan QR</button>
-    <div id="scan-result"></div>
-
-    <!-- TON Auth Section -->
-    <div id="auth-section">
-        <button id="connect-btn">Connect Wallet</button>
-        <div id="qr-container" class="qr-code"></div>
-        <div id="wallet-address" class="wallet-info"></div>
-        <div id="error" class="error"></div>
+    <div class="container">
+        <div id="login-button-container"></div>
+        <div id="wallet-info" style="display: none;">
+            <h3>Ваш кошелек:</h3>
+            <div id="wallet-address" class="address"></div>
+            <button onclick="disconnect()" class="button" style="margin-top: 20px; background-color: #cc0000;">
+                Выйти
+            </button>
+        </div>
     </div>
 
     <script>
-        // Инициализация Telegram Web App
-        Telegram.WebApp.ready();
-        
-        // TON Connect конфигурация
-        const manifestUrl = 'https://fatm1nd.github.io/titon_tma/tonconnect-manifest.json';
         const connector = new TonConnectSDK.TonConnect({
-            manifestUrl: manifestUrl,
-            walletSelection: {
-                includeWallets: [
-                    'tonkeeper',
-                    'tonhub',
-                    'mytonwallet'
-                ]
-            }
+            manifestUrl: 'https://fatm1nd.github.io/titon_tma/tonconnect-manifest.json'
         });
 
-        // Инициализация подключения
-        async function initialize() {
-            try {
-                await connector.restoreConnection();
-                updateUI();
-            } catch (error) {
-                showError(error);
-            }
-        }
-
-        // Обновление интерфейса
-        function updateUI() {
-            const isConnected = connector.connected;
-            document.getElementById('connect-btn').style.display = isConnected ? 'none' : 'block';
-            document.getElementById('qr-container').style.display = 'none';
+        async function init() {
+            Telegram.WebApp.ready();
             
-            if (isConnected) {
-                const address = connector.wallet.account.address;
-                document.getElementById('wallet-address').innerHTML = 
-                    `Connected wallet: <br>${shortAddress(address)}`;
-            }
+            const connected = await connector.restoreConnection();
+            updateUI(connected);
         }
 
-        // Генерация QR-кода
-        function generateQR(url) {
-            const qr = qrcode(0, 'M');
-            qr.addData(url);
-            qr.make();
-            document.getElementById('qr-container').innerHTML = qr.createSvgTag({
-                cellSize: 8,
-                margin: 4,
-                scalable: true
-            });
-        }
-
-        // Обработчик подключения кошелька
-        document.getElementById('connect-btn').addEventListener('click', async () => {
+        async function connect() {
             try {
-                const { link } = await connector.connect();
-                generateQR(link);
-                document.getElementById('qr-container').style.display = 'block';
-            } catch (error) {
-                showError(error);
+                const walletsList = await connector.getWallets();
+                const wallet = walletsList[0];
+                
+                await connector.connect(wallet);
+                updateUI(true);
+            } catch (e) {
+                console.error(e);
             }
-        });
-
-        // Обработчик сканирования QR
-        document.getElementById('scan-btn').addEventListener('click', () => {
-            Telegram.WebApp.showScanQrPopup(
-                { text: 'Scan TON Connect QR' },
-                data => {
-                    if (data) {
-                        connector.connect({ universalLink: data });
-                        Telegram.WebApp.closeScanQrPopup();
-                        document.getElementById('scan-result').textContent = 'QR scanned!';
-                    }
-                }
-            );
-        });
-
-        // Вспомогательные функции
-        function shortAddress(address) {
-            return `${address.slice(0, 6)}...${address.slice(-4)}`;
         }
 
-        function showError(error) {
-            document.getElementById('error').textContent = error.message;
+        async function disconnect() {
+            await connector.disconnect();
+            updateUI(false);
         }
 
-        // Запуск при загрузке
-        initialize();
-        connector.onStatusChange(updateUI);
+        function updateUI(isConnected) {
+            const loginButtonContainer = document.getElementById('login-button-container');
+            const walletInfo = document.getElementById('wallet-info');
+            const walletAddress = document.getElementById('wallet-address');
+
+            if (isConnected) {
+                const account = connector.account;
+                const friendlyAddress = account.address.toString(true, true, true);
+                walletAddress.textContent = friendlyAddress;
+                loginButtonContainer.style.display = 'none';
+                walletInfo.style.display = 'block';
+            } else {
+                loginButtonContainer.innerHTML = '<button class="button" onclick="connect()">Подключить кошелек</button>';
+                walletInfo.style.display = 'none';
+            }
+            
+            Telegram.WebApp.expand();
+        }
+
+        init();
     </script>
 </body>
 </html>
