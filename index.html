@@ -3,7 +3,7 @@
 <head>
     <title>TON Wallet Auth</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
-    <script src="https://unpkg.com/@tonconnect/sdk@latest/dist/tonconnect-sdk.min.js"></script>
+    <script src="https://unpkg.com/@tonconnect/ui@latest/dist/tonconnect-ui.min.js"></script>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -12,80 +12,66 @@
         }
         button {
             padding: 10px 20px;
-            background-color: #0088cc;
+            font-size: 16px;
+            cursor: pointer;
+            background: #0088cc;
             color: white;
             border: none;
             border-radius: 5px;
-            cursor: pointer;
-            margin: 10px;
         }
-        .hidden {
+        #walletInfo {
+            margin-top: 20px;
+            padding: 15px;
+            background: #f0f0f0;
+            border-radius: 5px;
             display: none;
         }
     </style>
 </head>
 <body>
-    <div id="authSection" class="hidden">
-        <p>Connected wallet: <span id="walletAddress"></span></p>
-        <button onclick="disconnectWallet()">Disconnect</button>
+    <h1>TON Wallet Auth</h1>
+    <button id="connectButton">Connect Wallet</button>
+    <div id="walletInfo">
+        <p>Connected Wallet:</p>
+        <p id="walletAddress"></p>
     </div>
 
-    <button id="connectButton" class="hidden" onclick="connectWallet()">Connect Wallet</button>
-
     <script>
-        // Инициализация TON Connector
-        const connector = new TonConnectSDK.TonConnect({
-            manifestUrl: 'https://fatm1nd.github.io/titon_tma/tonconnect-manifest.json'
+        // Инициализация TonConnectUI
+        const tonConnectUI = new TON_CONNECT_UI.TonConnectUI({
+            manifestUrl: 'https://fatm1nd.github.io/titon_tma/tonconnect-manifest.json',
+            buttonRootId: 'connectButton'
         });
 
-        // Инициализация Telegram Web App
-        const tg = window.Telegram.WebApp;
-        tg.expand();
-        tg.ready();
-
-        // Проверка существующего подключения при загрузке
-        async function init() {
-            const connected = await connector.restoreConnection();
-            updateUI(connected);
+        // Проверка существующего подключения
+        async function checkConnection() {
+            const connectedWallets = await tonConnectUI.getWallets();
+            if (connectedWallets.length > 0) {
+                updateUI(connectedWallets[0].account.address);
+            }
         }
 
-        // Обновление интерфейса в зависимости от статуса подключения
-        function updateUI(isConnected) {
-            document.getElementById('connectButton').classList.toggle('hidden', isConnected);
-            document.getElementById('authSection').classList.toggle('hidden', !isConnected);
+        // Обновление интерфейса
+        function updateUI(address) {
+            document.getElementById('connectButton').style.display = 'none';
+            document.getElementById('walletInfo').style.display = 'block';
+            document.getElementById('walletAddress').textContent = address;
+        }
+
+        // Обработчик подключения
+        tonConnectUI.onStatusChange(wallet => {
+            if (wallet) {
+                updateUI(wallet.account.address);
+            }
+        });
+
+        // Инициализация при загрузке
+        document.addEventListener('DOMContentLoaded', () => {
+            checkConnection();
             
-            if (isConnected) {
-                const account = connector.account;
-                document.getElementById('walletAddress').textContent = 
-                    `${account.address.slice(0, 4)}...${account.address.slice(-4)}`;
-            }
-        }
-
-        // Подключение кошелька
-        async function connectWallet() {
-            try {
-                const walletsList = await connector.getWallets();
-                const link = connector.connect(walletsList);
-                tg.openLink(link);
-                
-                connector.onStatusChange(wallet => {
-                    if (wallet) {
-                        updateUI(true);
-                    }
-                });
-            } catch (error) {
-                console.error('Connection error:', error);
-            }
-        }
-
-        // Отключение кошелька
-        async function disconnectWallet() {
-            await connector.disconnect();
-            updateUI(false);
-        }
-
-        // Инициализация приложения
-        document.addEventListener('DOMContentLoaded', init);
+            Telegram.WebApp.ready();
+            Telegram.WebApp.expand();
+        });
     </script>
 </body>
 </html>
