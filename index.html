@@ -25,7 +25,7 @@
 </head>
 <body>
     <h1>QR Code Scanner</h1>
-    <button id="scan-button">Scan QR Code</button>
+    <button id="scan-button">Scan QR Code 0.2</button>
     <div id="result"></div>
 
     <script>
@@ -33,15 +33,22 @@
         const resultDiv = document.getElementById('result');
 
         scanButton.addEventListener('click', () => {
+            // Открываем сканирующее окно
             Telegram.WebApp.showScanQrPopup({ text: 'Scan a QR Code' }, (data) => {
                 if (data) {
+                    // Если QR-код успешно отсканирован
                     resultDiv.innerText = `Scanned Data: ${data}`;
+                    
+                    // Закрываем окно с камерой
+                    Telegram.WebApp.closeScanQrPopup();
                 } else {
+                    // Если сканирование отменено или произошла ошибка
                     resultDiv.innerText = 'Scanning failed or canceled.';
                 }
             });
         });
 
+        // Инициализация Telegram Web App
         Telegram.WebApp.ready();
     </script>
 </body>
