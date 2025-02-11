@@ -14,14 +14,22 @@
             max-width: 600px;
             margin: 0 auto;
         }
-        .button {
-            background-color: #0088cc;
+        .tonkeeper-btn {
+            background-color: #45aaf2;
             color: white;
             padding: 12px 24px;
             border-radius: 8px;
             cursor: pointer;
             border: none;
             font-size: 16px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin: 0 auto;
+        }
+        .tonkeeper-icon {
+            width: 24px;
+            height: 24px;
         }
         .address {
             word-break: break-all;
@@ -36,35 +44,57 @@
     <div class="container">
         <div id="login-button-container"></div>
         <div id="wallet-info" style="display: none;">
-            <h3>Ваш кошелек:</h3>
+            <h3>Ваш кошелек TonKeeper:</h3>
             <div id="wallet-address" class="address"></div>
-            <button onclick="disconnect()" class="button" style="margin-top: 20px; background-color: #cc0000;">
-                Выйти
+            <button onclick="disconnect()" class="tonkeeper-btn" style="margin-top: 20px; background-color: #cc0000;">
+                Выйти из TonKeeper
             </button>
         </div>
     </div>
 
     <script>
         const connector = new TonConnectSDK.TonConnect({
-            manifestUrl: 'https://fatm1nd.github.io/titon_tma/tonconnect-manifest.json'
+            manifestUrl: 'https://ваш-домен/tonconnect-manifest.json'
         });
 
         async function init() {
             Telegram.WebApp.ready();
             
             const connected = await connector.restoreConnection();
-            updateUI(connected);
+            if (connected && isTonKeeper(connected)) {
+                updateUI(true);
+            } else {
+                await connector.disconnect();
+                updateUI(false);
+            }
         }
 
-        async function connect() {
+        function isTonKeeper(connection) {
+            return connection.device.appName.toLowerCase().includes('tonkeeper');
+        }
+
+        async function connectWithTonKeeper() {
             try {
                 const walletsList = await connector.getWallets();
-                const wallet = walletsList[0];
-                
-                await connector.connect(wallet);
+                const tonKeeperWallet = walletsList.find(
+                    wallet => wallet.appName.toLowerCase() === 'tonkeeper'
+                );
+
+                if (!tonKeeperWallet) {
+                    alert('TonKeeper не найден! Установите приложение');
+                    return;
+                }
+
+                const connectionSource = {
+                    universalLink: tonKeeperWallet.universalLink,
+                    bridgeUrl: tonKeeperWallet.bridgeUrl
+                };
+
+                await connector.connect(connectionSource);
                 updateUI(true);
             } catch (e) {
-                console.error(e);
+                console.error('Ошибка подключения:', e);
+                alert('Ошибка подключения к TonKeeper');
             }
         }
 
@@ -85,7 +115,12 @@
                 loginButtonContainer.style.display = 'none';
                 walletInfo.style.display = 'block';
             } else {
-                loginButtonContainer.innerHTML = '<button class="button" onclick="connect()">Подключить кошелек</button>';
+                loginButtonContainer.innerHTML = `
+                    <button class="tonkeeper-btn" onclick="connectWithTonKeeper()">
+                        <img src="https://tonkeeper.com/assets/tonconnect-icon.png" class="tonkeeper-icon">
+                        Войти через TonKeeper
+                    </button>
+                `;
                 walletInfo.style.display = 'none';
             }
             
