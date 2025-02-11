@@ -3,114 +3,122 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TON QR Scanner & Auth</title>
+    <title>TON Auth & QR Scanner</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>
-    <script type="module">
-        import { TonConnect } from 'https://cdn.jsdelivr.net/npm/@tonconnect/sdk@latest/+esm';
-        
-        const manifestUrl = 'https://your-hosting.com/tonconnect-manifest.json';
-        
-        const connector = new TonConnect({
-            manifestUrl: manifestUrl
-        });
-
-        async function initializeTonConnect() {
-            try {
-                await connector.restoreConnection();
-                updateWalletInfo();
-            } catch (e) {
-                console.error('Connection restore failed:', e);
-            }
-        }
-
-        function updateWalletInfo() {
-            const walletInfo = document.getElementById('wallet-info');
-            const connectButton = document.getElementById('connect-button');
-            const qrContainer = document.getElementById('qr-container');
-
-            if (connector.connected) {
-                const address = connector.wallet.account.address;
-                walletInfo.innerHTML = `Connected wallet: ${address}`;
-                connectButton.style.display = 'none';
-                qrContainer.innerHTML = '';
-            } else {
-                walletInfo.innerHTML = '';
-                connectButton.style.display = 'block';
-            }
-        }
-
-        window.connectWallet = async function() {
-            try {
-                const connectUrl = await connector.connect();
-                QRCode.toCanvas(document.getElementById('qr-canvas'), connectUrl, { width: 200 }, (error) => {
-                    if (error) console.error('QR generation error:', error);
-                });
-                document.getElementById('qr-container').style.display = 'block';
-            } catch (e) {
-                console.error('Connection error:', e);
-            }
-        };
-
-        connector.onStatusChange(wallet => {
-            updateWalletInfo();
-        });
-
-        window.addEventListener('load', initializeTonConnect);
-    </script>
+    <script src="https://unpkg.com/@tonconnect/sdk@latest/dist/tonconnect-sdk.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
     <style>
-        body {
-            font-family: Arial, sans-serif;
-            text-align: center;
-            padding: 20px;
-        }
-        button {
-            padding: 10px 20px;
-            font-size: 16px;
-            margin: 10px;
-            cursor: pointer;
-        }
-        #qr-container {
-            display: none;
-            margin: 20px auto;
-        }
-        #wallet-info {
-            margin-top: 20px;
-            word-wrap: break-word;
-            font-size: 16px;
-        }
+        body { font-family: Arial, sans-serif; text-align: center; padding: 20px; }
+        button { padding: 10px 20px; margin: 10px; cursor: pointer; }
+        .qr-code { margin: 20px auto; }
+        .wallet-info { word-wrap: break-word; color: green; }
+        .error { color: red; }
     </style>
 </head>
 <body>
-    <h1>TON Scanner & Auth</h1>
+    <h1>TON Auth with QR Scanner</h1>
     
     <!-- QR Scanner Section -->
-    <button id="scan-button" onclick="handleScan()">Scan QR Code</button>
+    <button id="scan-btn">Scan QR</button>
     <div id="scan-result"></div>
 
-    <!-- TON Connect Section -->
-    <button id="connect-button" onclick="connectWallet()">Connect TON Wallet</button>
-    <div id="qr-container">
-        <p>Scan this QR with your TON wallet:</p>
-        <canvas id="qr-canvas"></canvas>
+    <!-- TON Auth Section -->
+    <div id="auth-section">
+        <button id="connect-btn">Connect Wallet</button>
+        <div id="qr-container" class="qr-code"></div>
+        <div id="wallet-address" class="wallet-info"></div>
+        <div id="error" class="error"></div>
     </div>
-    <div id="wallet-info"></div>
 
     <script>
-        // QR Scanner Logic
-        function handleScan() {
-            Telegram.WebApp.showScanQrPopup({ text: 'Scan a QR Code' }, (data) => {
-                if (data) {
-                    document.getElementById('scan-result').textContent = `Scanned: ${data}`;
-                    Telegram.WebApp.closeScanQrPopup();
-                } else {
-                    document.getElementById('scan-result').textContent = 'Scanning failed';
-                }
+        // Инициализация Telegram Web App
+        Telegram.WebApp.ready();
+        
+        // TON Connect конфигурация
+        const manifestUrl = 'https://fatm1nd.github.io/titon_tma/tonconnect-manifest.json';
+        const connector = new TonConnectSDK.TonConnect({
+            manifestUrl: manifestUrl,
+            walletSelection: {
+                includeWallets: [
+                    'tonkeeper',
+                    'tonhub',
+                    'mytonwallet'
+                ]
+            }
+        });
+
+        // Инициализация подключения
+        async function initialize() {
+            try {
+                await connector.restoreConnection();
+                updateUI();
+            } catch (error) {
+                showError(error);
+            }
+        }
+
+        // Обновление интерфейса
+        function updateUI() {
+            const isConnected = connector.connected;
+            document.getElementById('connect-btn').style.display = isConnected ? 'none' : 'block';
+            document.getElementById('qr-container').style.display = 'none';
+            
+            if (isConnected) {
+                const address = connector.wallet.account.address;
+                document.getElementById('wallet-address').innerHTML = 
+                    `Connected wallet: <br>${shortAddress(address)}`;
+            }
+        }
+
+        // Генерация QR-кода
+        function generateQR(url) {
+            const qr = qrcode(0, 'M');
+            qr.addData(url);
+            qr.make();
+            document.getElementById('qr-container').innerHTML = qr.createSvgTag({
+                cellSize: 8,
+                margin: 4,
+                scalable: true
             });
         }
 
-        // Initialize Telegram Web App
-        Telegram.WebApp.ready();
+        // Обработчик подключения кошелька
+        document.getElementById('connect-btn').addEventListener('click', async () => {
+            try {
+                const { link } = await connector.connect();
+                generateQR(link);
+                document.getElementById('qr-container').style.display = 'block';
+            } catch (error) {
+                showError(error);
+            }
+        });
+
+        // Обработчик сканирования QR
+        document.getElementById('scan-btn').addEventListener('click', () => {
+            Telegram.WebApp.showScanQrPopup(
+                { text: 'Scan TON Connect QR' },
+                data => {
+                    if (data) {
+                        connector.connect({ universalLink: data });
+                        Telegram.WebApp.closeScanQrPopup();
+                        document.getElementById('scan-result').textContent = 'QR scanned!';
+                    }
+                }
+            );
+        });
+
+        // Вспомогательные функции
+        function shortAddress(address) {
+            return `${address.slice(0, 6)}...${address.slice(-4)}`;
+        }
+
+        function showError(error) {
+            document.getElementById('error').textContent = error.message;
+        }
+
+        // Запуск при загрузке
+        initialize();
+        connector.onStatusChange(updateUI);
     </script>
 </body>
 </html>
