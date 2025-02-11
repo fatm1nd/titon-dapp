@@ -3,131 +3,136 @@
 <head>
     <title>TON Wallet App</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
-    <script src="https://unpkg.com/@tonconnect/sdk@latest/dist/tonconnect-sdk.min.js"></script>
+    <script src="https://unpkg.com/@tonconnect/ui@latest/dist/tonconnect-ui.umd.js"></script>
     <style>
         body {
             font-family: Arial, sans-serif;
             padding: 20px;
             text-align: center;
+            background-color: var(--tg-theme-bg-color, #ffffff);
+            color: var(--tg-theme-text-color, #000000);
         }
         .container {
             max-width: 600px;
             margin: 0 auto;
         }
-        .tonkeeper-btn {
+        .connect-button {
             background-color: #45aaf2;
             color: white;
-            padding: 12px 24px;
-            border-radius: 8px;
-            cursor: pointer;
+            padding: 14px 28px;
+            border-radius: 12px;
             border: none;
             font-size: 16px;
+            cursor: pointer;
             display: flex;
             align-items: center;
-            gap: 10px;
-            margin: 0 auto;
+            gap: 12px;
+            margin: 20px auto;
+            transition: opacity 0.2s;
+        }
+        .connect-button:active {
+            opacity: 0.8;
         }
         .tonkeeper-icon {
             width: 24px;
             height: 24px;
         }
+        .wallet-info {
+            margin-top: 30px;
+        }
         .address {
             word-break: break-all;
-            margin-top: 20px;
-            padding: 15px;
-            background-color: #f0f0f0;
-            border-radius: 8px;
+            padding: 16px;
+            background-color: var(--tg-theme-secondary-bg-color, #f0f0f0);
+            border-radius: 12px;
+            margin: 20px 0;
+        }
+        .disconnect-button {
+            background-color: #ff3b30;
+            margin-top: 25px;
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <div id="login-button-container"></div>
-        <div id="wallet-info" style="display: none;">
-            <h3>Ваш кошелек TonKeeper:</h3>
-            <div id="wallet-address" class="address"></div>
-            <button onclick="disconnect()" class="tonkeeper-btn" style="margin-top: 20px; background-color: #cc0000;">
-                Выйти из TonKeeper
+        <div id="auth-section">
+            <button id="connect-button" class="connect-button" style="display: none;">
+                <img src="https://wallet.tonkeeper.com/favicon.ico" class="tonkeeper-icon" alt="">
+                Connect TonKeeper
             </button>
+            
+            <div id="wallet-info" class="wallet-info" style="display: none;">
+                <h3>Connected Wallet:</h3>
+                <div id="wallet-address" class="address"></div>
+                <button id="disconnect-button" class="connect-button disconnect-button">
+                    Disconnect
+                </button>
+            </div>
         </div>
     </div>
 
     <script>
-        const connector = new TonConnectSDK.TonConnect({
-            manifestUrl: 'https://fatm1nd.github.io/titon_tma/tonconnect-manifest.json'
+        // Инициализация TonConnectUI
+        const tonConnectUI = new TonConnectUI.TonConnectUI({
+            manifestUrl: 'https://fatm1nd.github.io/titon_tma/tonconnect-manifest.json',
+            uiPreferences: {
+                theme: Telegram.WebApp.colorScheme,
+                colorsSet: {
+                    [TonConnectUI.COLORS_SET.TON_CONNECT]: '#45aaf2'
+                }
+            }
         });
 
-        async function init() {
-            Telegram.WebApp.ready();
-            
-            const connected = await connector.restoreConnection();
-            if (connected && isTonKeeper(connected)) {
-                updateUI(true);
-            } else {
-                await connector.disconnect();
-                updateUI(false);
-            }
-        }
+        // Инициализация Telegram WebApp
+        Telegram.WebApp.ready();
+        Telegram.WebApp.expand();
 
-        function isTonKeeper(connection) {
-            return connection.device.appName.toLowerCase().includes('tonkeeper');
-        }
+        // Элементы интерфейса
+        const connectButton = document.getElementById('connect-button');
+        const disconnectButton = document.getElementById('disconnect-button');
+        const walletInfo = document.getElementById('wallet-info');
+        const walletAddress = document.getElementById('wallet-address');
 
-        async function connectWithTonKeeper() {
-            try {
-                const walletsList = await connector.getWallets();
-                const tonKeeperWallet = walletsList.find(
-                    wallet => wallet.appName.toLowerCase() === 'tonkeeper'
-                );
-
-                if (!tonKeeperWallet) {
-                    alert('TonKeeper не найден! Установите приложение');
-                    return;
-                }
-
-                const connectionSource = {
-                    universalLink: tonKeeperWallet.universalLink,
-                    bridgeUrl: tonKeeperWallet.bridgeUrl
-                };
-
-                await connector.connect(connectionSource);
-                updateUI(true);
-            } catch (e) {
-                console.error('Ошибка подключения:', e);
-                alert('Ошибка подключения к TonKeeper');
-            }
-        }
-
-        async function disconnect() {
-            await connector.disconnect();
-            updateUI(false);
-        }
-
-        function updateUI(isConnected) {
-            const loginButtonContainer = document.getElementById('login-button-container');
-            const walletInfo = document.getElementById('wallet-info');
-            const walletAddress = document.getElementById('wallet-address');
-
-            if (isConnected) {
-                const account = connector.account;
-                const friendlyAddress = account.address.toString(true, true, true);
-                walletAddress.textContent = friendlyAddress;
-                loginButtonContainer.style.display = 'none';
+        // Обработчики событий
+        tonConnectUI.onStatusChange(wallet => {
+            if (wallet) {
+                updateWalletInfo(wallet);
                 walletInfo.style.display = 'block';
+                connectButton.style.display = 'none';
             } else {
-                loginButtonContainer.innerHTML = `
-                    <button class="tonkeeper-btn" onclick="connectWithTonKeeper()">
-                        <img src="https://tonkeeper.com/assets/tonconnect-icon.png" class="tonkeeper-icon">
-                        Войти через TonKeeper
-                    </button>
-                `;
                 walletInfo.style.display = 'none';
+                connectButton.style.display = 'flex';
             }
-            
-            Telegram.WebApp.expand();
+        });
+
+        connectButton.addEventListener('click', () => {
+            tonConnectUI.openModal({
+                language: Telegram.WebApp.initDataUnsafe.user?.language_code || 'en'
+            });
+        });
+
+        disconnectButton.addEventListener('click', () => {
+            tonConnectUI.disconnect();
+        });
+
+        // Обновление информации о кошельке
+        function updateWalletInfo(wallet) {
+            const address = wallet.account.address;
+            const friendlyAddress = TonConnectUI.Address(address).toString(
+                true,
+                true,
+                true
+            );
+            walletAddress.textContent = friendlyAddress;
         }
 
-        init();
+        // Первоначальная проверка подключения
+        if (tonConnectUI.connected) {
+            updateWalletInfo(tonConnectUI.wallet);
+            walletInfo.style.display = 'block';
+        } else {
+            connectButton.style.display = 'flex';
+        }
     </script>
 </body>
 </html>
