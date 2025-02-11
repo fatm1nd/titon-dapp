@@ -1,140 +1,91 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>TON Wallet App</title>
+    <title>TON Wallet Auth</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
-    <script src="https://unpkg.com/@tonconnect/ui@0.0.9/dist/tonconnect-ui.min.js"></script>
-
+    <script src="https://unpkg.com/@tonconnect/sdk@latest/dist/tonconnect-sdk.min.js"></script>
     <style>
         body {
             font-family: Arial, sans-serif;
             padding: 20px;
             text-align: center;
-            background-color: var(--tg-theme-bg-color, #ffffff);
-            color: var(--tg-theme-text-color, #000000);
         }
-        .container {
-            max-width: 600px;
-            margin: 0 auto;
-        }
-        .connect-button {
-            background-color: #45aaf2;
+        button {
+            padding: 10px 20px;
+            background-color: #0088cc;
             color: white;
-            padding: 14px 28px;
-            border-radius: 12px;
             border: none;
-            font-size: 16px;
+            border-radius: 5px;
             cursor: pointer;
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            margin: 20px auto;
-            transition: opacity 0.2s;
+            margin: 10px;
         }
-        .connect-button:active {
-            opacity: 0.8;
-        }
-        .tonkeeper-icon {
-            width: 24px;
-            height: 24px;
-        }
-        .wallet-info {
-            margin-top: 30px;
-        }
-        .address {
-            word-break: break-all;
-            padding: 16px;
-            background-color: var(--tg-theme-secondary-bg-color, #f0f0f0);
-            border-radius: 12px;
-            margin: 20px 0;
-        }
-        .disconnect-button {
-            background-color: #ff3b30;
-            margin-top: 25px;
+        .hidden {
+            display: none;
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <div id="auth-section">
-            <button id="connect-button" class="connect-button" style="display: none;">
-                <img src="https://wallet.tonkeeper.com/favicon.ico" class="tonkeeper-icon" alt="">
-                Connect TonKeeper
-            </button>
-            
-            <div id="wallet-info" class="wallet-info" style="display: none;">
-                <h3>Connected Wallet:</h3>
-                <div id="wallet-address" class="address"></div>
-                <button id="disconnect-button" class="connect-button disconnect-button">
-                    Disconnect
-                </button>
-            </div>
-        </div>
+    <div id="authSection" class="hidden">
+        <p>Connected wallet: <span id="walletAddress"></span></p>
+        <button onclick="disconnectWallet()">Disconnect</button>
     </div>
 
+    <button id="connectButton" class="hidden" onclick="connectWallet()">Connect Wallet</button>
+
     <script>
-        // Инициализация TonConnectUI
-
-        const tonConnectUI = new TON_CONNECT_UI.TonConnectUI({
-            manifestUrl: 'https://fatm1nd.github.io/titon_tma/tonconnect-manifest.json',
-            uiPreferences: {
-                theme: Telegram.WebApp.colorScheme,
-                colorsSet: {
-                    [TON_CONNECT_UI.COLORS_SET.TON_CONNECT]: '#45aaf2'
-                }
-            }
+        // Инициализация TON Connector
+        const connector = new TonConnectSDK.TonConnect({
+            manifestUrl: 'https://fatm1nd.github.io/titon_tma/tonconnect-manifest.json'
         });
 
-        // Инициализация Telegram WebApp
-        Telegram.WebApp.ready();
-        Telegram.WebApp.expand();
+        // Инициализация Telegram Web App
+        const tg = window.Telegram.WebApp;
+        tg.expand();
+        tg.ready();
 
-        // Элементы интерфейса
-        const connectButton = document.getElementById('connect-button');
-        const disconnectButton = document.getElementById('disconnect-button');
-        const walletInfo = document.getElementById('wallet-info');
-        const walletAddress = document.getElementById('wallet-address');
-
-        // Обработчики событий
-        tonConnectUI.onStatusChange(wallet => {
-            if (wallet) {
-                updateWalletInfo(wallet);
-                walletInfo.style.display = 'block';
-                connectButton.style.display = 'none';
-            } else {
-                walletInfo.style.display = 'none';
-                connectButton.style.display = 'flex';
-            }
-        });
-
-        connectButton.addEventListener('click', () => {
-            tonConnectUI.openModal({
-                language: Telegram.WebApp.initDataUnsafe.user?.language_code || 'en'
-            });
-        });
-
-        disconnectButton.addEventListener('click', () => {
-            tonConnectUI.disconnect();
-        });
-
-        // Обновление информации о кошельке
-        function updateWalletInfo(wallet) {
-            const address = wallet.account.address;
-            const friendlyAddress = TonConnectUI.Address(address).toString(
-                true,
-                true,
-                true
-            );
-            walletAddress.textContent = friendlyAddress;
+        // Проверка существующего подключения при загрузке
+        async function init() {
+            const connected = await connector.restoreConnection();
+            updateUI(connected);
         }
 
-        // Первоначальная проверка подключения
-        if (tonConnectUI.connected) {
-            updateWalletInfo(tonConnectUI.wallet);
-            walletInfo.style.display = 'block';
-        } else {
-            connectButton.style.display = 'flex';
+        // Обновление интерфейса в зависимости от статуса подключения
+        function updateUI(isConnected) {
+            document.getElementById('connectButton').classList.toggle('hidden', isConnected);
+            document.getElementById('authSection').classList.toggle('hidden', !isConnected);
+            
+            if (isConnected) {
+                const account = connector.account;
+                document.getElementById('walletAddress').textContent = 
+                    `${account.address.slice(0, 4)}...${account.address.slice(-4)}`;
+            }
         }
+
+        // Подключение кошелька
+        async function connectWallet() {
+            try {
+                const walletsList = await connector.getWallets();
+                const link = connector.connect(walletsList);
+                tg.openLink(link);
+                
+                connector.onStatusChange(wallet => {
+                    if (wallet) {
+                        updateUI(true);
+                    }
+                });
+            } catch (error) {
+                console.error('Connection error:', error);
+            }
+        }
+
+        // Отключение кошелька
+        async function disconnectWallet() {
+            await connector.disconnect();
+            updateUI(false);
+        }
+
+        // Инициализация приложения
+        document.addEventListener('DOMContentLoaded', init);
     </script>
 </body>
 </html>
