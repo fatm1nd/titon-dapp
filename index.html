@@ -31,6 +31,7 @@
 <body>
     <h1>TON Wallet Auth</h1>
     <button id="connectButton">Connect Wallet</button>
+    <button id="disconnectButton" style="display: none">Disconnect</button>
     <div id="walletInfo">
         <p>Connected Wallet:</p>
         <p id="walletAddress"></p>
@@ -54,6 +55,7 @@
         // Обновление интерфейса
         function updateUI(address) {
             document.getElementById('connectButton').style.display = 'none';
+            document.getElementById('disconnectButton').style.display = 'block';
             document.getElementById('walletInfo').style.display = 'block';
             document.getElementById('walletAddress').textContent = address;
         }
@@ -72,6 +74,12 @@
             Telegram.WebApp.ready();
             Telegram.WebApp.expand();
         });
+
+        document.getElementById('disconnectButton').addEventListener('click', () => {
+            tonConnectUI.disconnect();
+            document.getElementById('connectButton').style.display = 'block';
+            document.getElementById('disconnectButton').style.display = 'none';
+        })
     </script>
 </body>
 </html>
