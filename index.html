@@ -1,85 +1,13 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <title>TON Wallet Auth</title>
-    <script src="https://telegram.org/js/telegram-web-app.js"></script>
-    <script src="https://unpkg.com/@tonconnect/ui@latest/dist/tonconnect-ui.min.js"></script>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            padding: 20px;
-            text-align: center;
-        }
-        button {
-            padding: 10px 20px;
-            font-size: 16px;
-            cursor: pointer;
-            background: #0088cc;
-            color: white;
-            border: none;
-            border-radius: 5px;
-        }
-        #walletInfo {
-            margin-top: 20px;
-            padding: 15px;
-            background: #f0f0f0;
-            border-radius: 5px;
-            display: none;
-        }
-    </style>
-</head>
-<body>
-    <h1>TON Wallet Auth</h1>
-    <button id="connectButton">Connect Wallet</button>
-    <button id="disconnectButton" style="display: none">Disconnect</button>
-    <div id="walletInfo">
-        <p>Connected Wallet:</p>
-        <p id="walletAddress"></p>
-    </div>
-
-    <script>
-        // Инициализация TonConnectUI
-        const tonConnectUI = new TON_CONNECT_UI.TonConnectUI({
-            manifestUrl: 'https://fatm1nd.github.io/titon_tma/tonconnect-manifest.json',
-            buttonRootId: 'connectButton'
-        });
-
-        // Проверка существующего подключения
-        async function checkConnection() {
-            const connectedWallets = await tonConnectUI.getWallets();
-            if (connectedWallets.length > 0) {
-                updateUI(connectedWallets[0].account.address);
-            }
-        }
-
-        // Обновление интерфейса
-        function updateUI(address) {
-            document.getElementById('connectButton').style.display = 'none';
-            document.getElementById('disconnectButton').style.display = 'block';
-            document.getElementById('walletInfo').style.display = 'block';
-            document.getElementById('walletAddress').textContent = address;
-        }
-
-        // Обработчик подключения
-        tonConnectUI.onStatusChange(wallet => {
-            if (wallet) {
-                updateUI(wallet.account.address);
-            }
-        });
-
-        // Инициализация при загрузке
-        document.addEventListener('DOMContentLoaded', () => {
-            checkConnection();
-            
-            Telegram.WebApp.ready();
-            Telegram.WebApp.expand();
-        });
-
-        document.getElementById('disconnectButton').addEventListener('click', () => {
-            tonConnectUI.disconnect();
-            document.getElementById('connectButton').style.display = 'block';
-            document.getElementById('disconnectButton').style.display = 'none';
-        })
-    </script>
-</body>
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Vite + React + TS</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
 </html>
