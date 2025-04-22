@@ -306,8 +306,8 @@ const CreateEventPage = () => {
              validUntil: Date.now() + 5 * 60 * 1000, // 5 minutes
              messages: [
                {
-                 address: 'kQA6hQg_24oDRJDAxQMPnFC-pH_vFvdaRk2wKm0_2IupebBu', // Замените на адрес вашего контракта
-                 amount: '60000000', // 0.05 TON
+                 address: `${import.meta.env.VITE_EVENTFACTORY_ADDRESS}`, // Замените на адрес вашего контракта
+                 amount: '50000000', // 0.05 TON
                  payload: cell.toBoc().toString('base64')
                }
              ]
