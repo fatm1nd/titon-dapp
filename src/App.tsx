@@ -3,12 +3,13 @@ import EventPage from "./pages/Event";
 import CreateEventPage from "./pages/CreateEvent";
 import TicketsPage from "./pages/MyTickets"
 import GuardScannerPage from "./pages/GuardScanner";
-
+import Landing from './pages/Landing';
 
 function App() {
   return (
     <BrowserRouter>
       <Routes>
+        <Route path="/" element={<Landing />} />
         <Route path="/event" element={<EventPage />} />
         <Route path="/createEvent" element={<CreateEventPage />} />
         <Route path="/mytickets" element={<TicketsPage />} />

@@ -2,14 +2,18 @@ import { useState, useEffect } from 'react';
 import { TonConnectButton, useTonWallet } from '@tonconnect/ui-react';
 import './TicketsPage.css';
 import { HttpClient, Api } from 'tonapi-sdk-js';
+import usePageTitle from '../hooks/usePageTitile';
 // import { QrScanner } from '@yudiel/react-qr-scanner';
 // import QRCode from 'qrcode.react';
+
 
 const TicketsPage = () => {
   const wallet = useTonWallet();
   const [tickets, setTickets] = useState([]);
   const [selectedTicket, setSelectedTicket] = useState(null);
   const [loading, setLoading] = useState(false);
+  usePageTitle('Мои билеты');
+
 
   const httpClient = new HttpClient({
       baseUrl: import.meta.env.VITE_TONAPI_BASE_URL,

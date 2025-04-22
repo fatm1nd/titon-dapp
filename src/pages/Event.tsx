@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { TonConnectButton, useTonConnectUI, useTonWallet  } from '@tonconnect/ui-react';
 import {  toNano, Address, beginCell } from '@ton/core';
 import './EventPage.css';
+import usePageTitle from '../hooks/usePageTitile';
 
 import { TonClient } from 'ton';
 
@@ -12,6 +13,7 @@ export const toncenter = new TonClient({
 
 
 const EventPage = () => {
+  
   const [eventAddress, setEventAddress] = useState('');
   const [metadata_url, setMetadataUrlAddress] = useState('');
   const wallet = useTonWallet();
@@ -115,6 +117,9 @@ const EventPage = () => {
       socialLinks: md.social_links,
       minPrice: Number(md.price) / 1000000000
     })
+
+    usePageTitle(md.name);
+
 
     // let testObject = Event.fromAddress(Address.parse(address_string)).getGetCollectionData(wallet);
     // console.log(testObject);

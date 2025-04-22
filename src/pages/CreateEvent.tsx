@@ -3,6 +3,8 @@ import { TonConnectButton, useTonWallet, useTonConnectUI } from '@tonconnect/ui-
 import './CreateEvent.css';
 import { toNano, Address, Builder } from '@ton/core';
 import { storeCreateEvent, CreateEvent } from "../contracts/EventFactoryv2"
+import usePageTitle from '../hooks/usePageTitile';
+
 
 import { TonClient, TupleBuilder, Address as ad, Builder as bldr } from 'ton';
 export const toncenter = new TonClient({
@@ -10,6 +12,7 @@ export const toncenter = new TonClient({
 });
 
 const CreateEventPage = () => {
+  usePageTitle('Создание мероприятия');
   const wallet = useTonWallet();
   const [tonConnectUI, setOptions] = useTonConnectUI();
   const [isGenerating, setIsGenerating] = useState(false);
