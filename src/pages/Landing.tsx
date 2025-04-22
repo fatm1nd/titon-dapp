@@ -21,8 +21,8 @@ const Landing = () => {
       </div>
 
       <nav className="nav-links">
-        <Link to="/my-tickets" className="nav-link">Мои билеты</Link>
-        <Link to="/create-event" className="nav-link">Создать мероприятие</Link>
+        <Link to="/mytickets" className="nav-link">Мои билеты</Link>
+        <Link to="/createEvent" className="nav-link">Создать мероприятие</Link>
       </nav>
 
       <div className="event-search">
@@ -34,7 +34,7 @@ const Landing = () => {
           className="address-input"
         />
         <Link 
-          to={`/event/${eventAddress}`} 
+          to={`/event?event_address=${eventAddress}`} 
           className={`search-button ${!eventAddress ? 'disabled' : ''}`}
         >
           Найти
